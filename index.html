@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Blood Cell Detector</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f4f7fa;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      color: #333;
+    }
+
+    header {
+      background-color: #0077b6;
+      color: white;
+      padding: 20px 0;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 2em;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 30px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    input[type="file"] {
+      margin: 20px 0;
+      padding: 10px;
+      font-size: 1em;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      background-color: #0077b6;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background-color: #005f99;
+    }
+
+    .image-container {
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      margin-top: 20px;
+      gap: 20px;
+    }
+
+    .image-box {
+      width: 48%;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .image-box img {
+      width: 100%;
+      height: auto;
+    }
+
+    .image-box p {
+      margin: 0;
+      padding: 10px;
+      background: #f1f1f1;
+      font-weight: bold;
+    }
+
+    pre {
+      text-align: left;
+      background: #222;
+      color: #0f0;
+      padding: 15px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 0.9em;
+    }
+
+    footer {
+      margin-top: 50px;
+      padding: 20px;
+      background-color: #0077b6;
+      color: white;
+    }
+
+    @media (max-width: 768px) {
+      .image-container {
+        flex-direction: column;
+      }
+      .image-box {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🩸 Blood Cell Detector</h1>
+  <p>Upload a microscopic image → detect RBC, WBC, and Platelets</p>
+</header>
+
+<div class="container">
+  <input type="file" id="imageInput" accept="image/*" />
+  <button onclick="uploadImage()">🔍 Detect Cells</button>
+
+  <div class="image-container" id="result"></div>
+</div>
+
+<footer>
+  <p>Made by Hatem Alathwari</p>
+</footer>
+
+<script>
+  async function uploadImage() {
+    const input = document.getElementById('imageInput');
+    const resultDiv = document.getElementById('result');
+
+    if (!input.files.length) {
+      alert("Please select an image.");
+      return;
+    }
+
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    resultDiv.innerHTML = "<p>🧠 Analyzing image...</p>";
+
+    try {
+      const response = await fetch("http://localhost:5000/predict", {
+        method: "POST",
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        resultDiv.innerHTML = `<p style="color:red;">⚠️ ${data.error}</p>`;
+        return;
+      }
+
+      // Clear previous results
+      resultDiv.innerHTML = "";
+
+      // Show original image
+      const origBox = document.createElement("div");
+      origBox.className = "image-box";
+      const origImg = document.createElement("img");
+      origImg.src = URL.createObjectURL(file);
+      const origLabel = document.createElement("p");
+      origLabel.innerText = "Original Image";
+      origBox.appendChild(origLabel);
+      origBox.appendChild(origImg);
+
+      // Show predicted image
+      const predBox = document.createElement("div");
+      predBox.className = "image-box";
+
+      const predImg = document.createElement("img");
+      predImg.src = "data:image/png;base64," + data.image_with_boxes;
+
+      const predLabel = document.createElement("p");
+      predLabel.innerText = "Detected Blood Cells";
+
+      predBox.appendChild(predLabel);
+      predBox.appendChild(predImg);
+
+      // Add both
+      resultDiv.appendChild(origBox);
+      resultDiv.appendChild(predBox);
+
+      // Show predictions list
+      const predList = document.createElement("pre");
+      predList.textContent = JSON.stringify(data.predictions, null, 2);
+      resultDiv.appendChild(predList);
+
+    } catch (err) {
+      resultDiv.innerHTML = `<p style="color:red;">🚨 API Error: ${err.message}</p>`;
+    }
+  }
+</script>
+
+</body>
+</html>
